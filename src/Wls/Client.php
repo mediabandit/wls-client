@@ -29,24 +29,24 @@ class Client
      *
      * @var string
      */
-    protected static $baseUri;
-
-    /**
-     * List of required options
-     *
-     * @var array
-     */
-    protected $requiredOptions = array(
-        'publicKey',
-        'privateKey'
-    );
+    protected $baseUri;
 
     /**
      * Client options
      * 
      * @var array
      */
-    protected $options = array();
+    protected static $options = array();
+
+    /**
+     * List of required options
+     *
+     * @var array
+     */
+    protected static $requiredOptions = array(
+        'publicKey',
+        'privateKey'
+    );
 
     /**
      * cURL options
@@ -54,6 +54,17 @@ class Client
      * @var array
      */
     protected $curlOptions = array();
+
+    /**
+     * @param string $baseUri [optional]
+     */
+    public function __construct($baseUri = null)
+    {
+        if (null === $baseUri) {
+            $baseUri = self::DEFAULT_URI;
+        }
+        $this->baseUri = $baseUri;
+    }
 
     /**
      * Set the API base URL
@@ -66,12 +77,13 @@ class Client
     }
 
     /**
+     * Set client options
+     * 
      * @param array $options
      */
-    public function __construct(array $options)
+    public static function setOptions(array $options)
     {
-        $this->options = $this->validateOptions($options);
-        self::setBaseUri(self::DEFAULT_URI);
+        self::$options = self::validateOptions($options);
     }
 
     /**
@@ -103,7 +115,7 @@ class Client
      */
     public function search(array $parameters)
     {
-        $url = $this->signUrl(self::$baseUri . '/search' . '?' . http_build_query($parameters));
+        $url = $this->signUrl($this->baseUri . '/search' . '?' . http_build_query($parameters));
         return json_decode($this->makeRequest($url), true);
     }
 
@@ -131,11 +143,11 @@ class Client
         }
 
         // Add the public key and current timestamp
-        $url .= self::PARAM_PUBLIC_KEY . '=' . $this->options['publicKey'] .
+        $url .= self::PARAM_PUBLIC_KEY . '=' . self::$options['publicKey'] .
             '&' . self::PARAM_TIMESTAMP . '=' . $this->getTimestamp();
 
         // Create a hash token using the private key
-        $hashToken = $url . $this->options['privateKey'];
+        $hashToken = $url . self::$options['privateKey'];
 
         // Hash, pack and encode the token
         $hash = $this->createSignedHash($hashToken);
@@ -152,6 +164,9 @@ class Client
      */
     protected function makeRequest($uri)
     {
+        if (!array_key_exists(CURLOPT_USERAGENT, $this->curlOptions)) {
+            $this->curlOptions[CURLOPT_USERAGENT] = $_SERVER['HTTP_USER_AGENT'];
+        }
         $ch = curl_init();
         curl_setopt_array($ch, $this->curlOptions);
         curl_setopt($ch, CURLOPT_URL, $uri);
@@ -169,9 +184,9 @@ class Client
      * @return array
      * @throws Wls\Exception
      */
-    protected function validateOptions(array $options)
+    protected static function validateOptions(array $options)
     {
-        foreach ($this->requiredOptions as $option) {
+        foreach (self::$requiredOptions as $option) {
             if (!array_key_exists($option, $options)) {
                 throw new Exception('Missing required option "' . $option . '"');
             }
