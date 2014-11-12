@@ -21,7 +21,15 @@ class Client
 {
     const PARAM_PUBLIC_KEY = 'dkey',
           PARAM_TIMESTAMP  = 'timestamp',
-          PARAM_HASH       = 'hash';
+          PARAM_HASH       = 'hash',
+          DEFAULT_URI      = 'http://api.whitelabelshopping.net';
+
+    /**
+     * The base URI to query
+     *
+     * @var string
+     */
+    protected static $baseUri;
 
     /**
      * List of required options
@@ -41,11 +49,62 @@ class Client
     protected $options = array();
 
     /**
+     * cURL options
+     * 
+     * @var array
+     */
+    protected $curlOptions = array();
+
+    /**
+     * Set the API base URL
+     * 
+     * @param string $baseUrl
+     */
+    public static function setBaseUri($baseUri)
+    {
+        self::$baseUri = $baseUri;
+    }
+
+    /**
      * @param array $options
      */
     public function __construct(array $options)
     {
         $this->options = $this->validateOptions($options);
+        self::setBaseUri(self::DEFAULT_URI);
+    }
+
+    /**
+     * Set the cURL options to use when making a request
+     * 
+     * @param array $options
+     */
+    public function setCurlOptions(array $options)
+    {
+        $this->curlOptions = $options;
+    }
+
+    /**
+     * Set an individual cURL option
+     * 
+     * @param string $option
+     * @param mixed $value
+     */
+    public function setCurlOption($option, $value)
+    {
+        $this->curlOptions[$option] = $value;
+    }
+
+    /**
+     * Perform a search
+     * 
+     * @param  array  $parameters
+     * @return array
+     */
+    public function search(array $parameters)
+    {
+        $url = $this->signUrl(self::$baseUri . '/search' . '?' . http_build_query($parameters));
+        return json_decode($this->makeRequest($url), true);
     }
 
     /**
@@ -83,6 +142,24 @@ class Client
 
         // Append the generated hash to the URL
         return $url . '&' . self::PARAM_HASH . '=' . $hash;
+    }
+
+    /**
+     * Make a request to a uri
+     * 
+     * @param  string $uri
+     * @return string
+     */
+    protected function makeRequest($uri)
+    {
+        $ch = curl_init();
+        curl_setopt_array($ch, $this->curlOptions);
+        curl_setopt($ch, CURLOPT_URL, $uri);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        return $response;
     }
 
     /**
