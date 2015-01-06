@@ -135,8 +135,12 @@ class Client
             ksort($params);
 
             $parts['query'] = http_build_query($params);
-            
-            $url = $parts['scheme'] . '://' . $parts['host'] .
+            $url = '';
+
+            if (isset($parts['scheme'])) {
+                $url .= $parts['scheme'] . ':';
+            }
+            $url .= '//' . $parts['host'] .
                 (isset($parts['path']) ? $parts['path'] : '') . '?' . $parts['query'] . '&';
         } else {
             $url .= '?';
