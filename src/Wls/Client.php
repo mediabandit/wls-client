@@ -153,9 +153,15 @@ class Client
         // Create a hash token using the private key
         $hashToken = $url . self::$options['privateKey'];
 
-        // Ignore scheme when generating the hash token
-        $hashToken = str_replace($parts['scheme'] . '://', '', $hashToken);
-
+        // Ignore schemes when generating the hash token
+        $hashToken = str_replace(
+            array(
+                $parts['scheme'] . '://',
+                '//'
+            ),
+            '',
+            $hashToken
+        );
         // Hash, pack and encode the token
         $hash = $this->createSignedHash($hashToken);
 
